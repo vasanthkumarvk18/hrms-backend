@@ -1,8 +1,9 @@
-package com.hrms.service;
+package com.hrms.employee.service;
 
-import com.hrms.dto.EmployeeCreateRequest;
-import com.hrms.entity.Employee;
-import com.hrms.repository.EmployeeRepository;
+import com.hrms.employee.dto.EmployeeCreateDTO;
+import com.hrms.employee.entity.Employee;
+import com.hrms.employee.repository.EmployeeRepository;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -15,23 +16,38 @@ public class EmployeeService {
 
     private final EmployeeRepository employeeRepository;
 
-    public Employee createEmployee(EmployeeCreateRequest request) {
+    public Employee createEmployee(EmployeeCreateDTO request) {
 
         if (employeeRepository.existsByEmail(request.getEmail())) {
             throw new RuntimeException("Email already exists");
         }
 
         Employee employee = Employee.builder()
-                .employeeId(generateEmployeeId())
+                .employeeCode(generateEmployeeId())
+
                 .firstName(request.getFirstName())
                 .lastName(request.getLastName())
+
+                .gender(request.getGender())
+                .dob(request.getDob())
+
                 .email(request.getEmail())
                 .mobile(request.getMobile())
+
                 .departmentId(request.getDepartmentId())
                 .designationId(request.getDesignationId())
+                .managerId(request.getManagerId())
+
                 .dateOfJoining(request.getDateOfJoining())
-                .employmentType("FULL_TIME") // default value
+                .employmentType(request.getEmploymentType())
+
+                .maritalStatus(request.getMaritalStatus())
+                .bloodGroup(request.getBloodGroup())
+                .profilePhotoUrl(request.getProfilePhotoUrl())
+                .probationEndDate(request.getProbationEndDate())
+
                 .build();
+
 
         return employeeRepository.save(employee);
     }
@@ -40,14 +56,14 @@ public class EmployeeService {
         return employeeRepository.findByStatus("ACTIVE");
     }
 
-    public Employee getByEmployeeId(String employeeId) {
-        return employeeRepository.findByEmployeeId(employeeId)
+    public Employee getByEmployeeId(String employeeCode) {
+        return employeeRepository.findByEmployeeCode(employeeCode)
                 .orElseThrow(() -> new RuntimeException("Employee not found"));
     }
 
-    public void exitEmployee(String employeeId) {
+    public void exitEmployee(String employeeCode) {
 
-        Employee emp = getByEmployeeId(employeeId);
+        Employee emp = getByEmployeeId(employeeCode);
 
         emp.setStatus("EXITED");
 

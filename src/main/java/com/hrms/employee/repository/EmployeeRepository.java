@@ -1,6 +1,7 @@
-package com.hrms.repository;
-import com.hrms.entity.Employee;
+package com.hrms.employee.repository;
 import org.springframework.data.jpa.repository.JpaRepository;
+
+import com.hrms.employee.entity.Employee;
 
 import java.util.List;
 import java.util.Optional;
@@ -10,7 +11,7 @@ public interface EmployeeRepository extends JpaRepository<Employee,Long>{
 	
 	boolean existsByEmail(String email);
 	
-	Optional<Employee>findByEmployeeId(String employeeId);
+	Optional<Employee>findByEmployeeCode(String employeeId);
 	
 	List<Employee>findByStatus(String status);
 
