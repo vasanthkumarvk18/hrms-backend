@@ -20,12 +20,10 @@ public class Department {
     @Column(nullable = false, unique = true, length = 100)
     private String name;
 
-    // parent department (nullable for root)
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "parent_id")
     private Department parent;
 
-    // child departments
     @OneToMany(mappedBy = "parent")
     private List<Department> children;
 }
