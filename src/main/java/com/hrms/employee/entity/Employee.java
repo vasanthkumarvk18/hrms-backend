@@ -9,7 +9,7 @@ import java.time.LocalDateTime;
 	    name = "employees",
 	    uniqueConstraints = {
 	        @UniqueConstraint(columnNames = "email"),
-	        @UniqueConstraint(columnNames = "employee_id")
+	        @UniqueConstraint(columnNames = "employee_code")
 	    }
 	)
 @Data
