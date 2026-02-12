@@ -27,7 +27,7 @@ public class AttendanceService {
     // CHECK-IN
     public Attendance checkIn(Employee employee) {
 
-    	LocalDate today = LocalDate.now();
+//    	LocalDate today = LocalDate.now();
 
         attendanceRepository
         .findByEmployeeAndDateAndCheckOutIsNull(employee, LocalDate.now())

@@ -8,8 +8,6 @@ import com.hrms.attendance.entity.*;
 
 import java.util.List;
 
-import org.springframework.data.jpa.repository.JpaRepository;
-
 import com.hrms.employee.entity.*;
 
 public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
