@@ -1,7 +1,9 @@
 package com.hrms.users.AuthController;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -26,28 +28,38 @@ public class AuthController {
 
     private final UserRepository userRepository;
     private final JwtUtil jwtUtil;
+    @Autowired
+    private PasswordEncoder passwordEncoder;
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest request) {
 
-        User user = userRepository.findByUsername(request.getUsername());
+        User user = userRepository.findByEmail(request.getEmail());
 
-        if (user == null || !user.getPassword().equals(request.getPassword())) {
+        if (user == null || !passwordEncoder.matches(request.getPassword(), user.getPassword())) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body("Invalid username or password");
+                    .body("Invalid email or password");
         }
 
-        String token = jwtUtil.generateToken(user.getUsername());
+        //String token = jwtUtil.generateToken(user.getEmail());
+        String token = jwtUtil.generateToken(
+                user.getEmail(),
+                user.getRole().name()
+        );
 
-        return ResponseEntity.ok(new JwtResponse(token));
+        return ResponseEntity.ok(JwtResponse.builder()
+                .token(token)
+                .role(user.getRole().name())
+                .build());
     }
     
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody RegisterRequest request) {
 
         User user = new User();
-        user.setUsername(request.getUsername());
-        user.setPassword(request.getPassword()); // plain text for now
+        user.setEmail(request.getEmail());
+        //user.setPassword(request.getPassword()); // plain text for now
+        user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setRole(request.getRole());
 
         userRepository.save(user);

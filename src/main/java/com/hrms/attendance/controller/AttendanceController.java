@@ -12,9 +12,11 @@ import com.hrms.attendance.entity.*;
 import com.hrms.employee.entity.*;
 import com.hrms.employee.repository.*;
 import com.hrms.attendance.service.*;
+import com.hrms.attendance.dto.*;
+
 
 @RestController
-@RequestMapping("/attendance")
+@RequestMapping("/api/attendance")
 @CrossOrigin(origins = "http://localhost:4200") // Add CORS support for Angular
 public class AttendanceController {
 
@@ -29,20 +31,43 @@ public class AttendanceController {
     }
 
     // CHECK-IN API
-    @PostMapping("/check-in/{employeeCode}")
-    public Attendance checkIn(@PathVariable String employeeCode) {
+//    @PostMapping("/check-in/{employeeCode}")
+//    public Attendance checkIn(@PathVariable String employeeCode,
+//    		                  @RequestParam String workLocation) {
+//
+//        Employee employee = employeeRepository.findByEmployeeCode(employeeCode)
+//                .orElseThrow(() -> new RuntimeException("Employee not found"));
+//
+//        return attendanceService.checkIn(employee, workLocation);
+//    }
+    @PostMapping("/check-in")
+    public Attendance checkIn(@RequestParam String workLocation,
+                              org.springframework.security.core.Authentication authentication) {
 
-        Employee employee = employeeRepository.findByEmployeeCode(employeeCode)
+        String email = authentication.getName(); // gets logged-in email
+
+        Employee employee = employeeRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("Employee not found"));
 
-        return attendanceService.checkIn(employee);
+        return attendanceService.checkIn(employee, workLocation);
     }
     
     // CHECK_OUT API
-    @PostMapping("/check-out/{employeeCode}")
-    public Attendance checkOut(@PathVariable String employeeCode) {
-    	Employee employee = employeeRepository.findByEmployeeCode(employeeCode)
-    			.orElseThrow(() -> new RuntimeException("Employee not found" + employeeCode));
+//    @PostMapping("/check-out/{employeeCode}")
+//    public Attendance checkOut(@PathVariable String employeeCode) {
+//    	Employee employee = employeeRepository.findByEmployeeCode(employeeCode)
+//    			.orElseThrow(() -> new RuntimeException("Employee not found" + employeeCode));
+//        return attendanceService.checkOut(employee);
+//    }
+    @PostMapping("/check-out")
+    public Attendance checkOut(
+            org.springframework.security.core.Authentication authentication) {
+
+        String email = authentication.getName();
+
+        Employee employee = employeeRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Employee not found"));
+
         return attendanceService.checkOut(employee);
     }
 
@@ -89,6 +114,46 @@ public class AttendanceController {
 
         return attendanceService.getMonthlySummary(emp, year, month);
     }
+    
+    // HR REPORT API
+    @GetMapping("/hr-report")
+    public List<Attendancedto> getHRReport(
+    		@RequestParam(required = false) LocalDate fromDate,
+            @RequestParam(required = false) LocalDate toDate) {
+
+     return attendanceService.getHrReport(fromDate, toDate);
+    }
+    
+    // HR DASHBOARD SUMMARY (ALL EMPLOYEES)
+    @GetMapping("/dashboard-summary")
+    public Map<String, Object> getDashboardSummary(
+            @RequestParam(required = false) String fromDate,
+            @RequestParam(required = false) String toDate) {
+
+        LocalDate start = null;
+        LocalDate end = null;
+
+        if (fromDate != null && toDate != null) {
+            start = LocalDate.parse(fromDate);
+            end = LocalDate.parse(toDate);
+        }
+
+        return attendanceService.getDashboardSummary(start, end);
+    }
+
+    // ADMIN MANUAL CHECKOUT
+    @PostMapping("/manual-checkout")
+    public Attendance manualCheckout(
+            @RequestParam String employeeCode,
+            @RequestParam LocalDate date) {
+
+        Employee employee = employeeRepository.findByEmployeeCode(employeeCode)
+                .orElseThrow(() -> new RuntimeException("Employee not found"));
+
+        return attendanceService.manualCheckout(employee, date);
+    }
+
+
 
 
 }

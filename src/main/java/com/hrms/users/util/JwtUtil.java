@@ -1,5 +1,6 @@
 package com.hrms.users.util;
 
+import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
@@ -13,22 +14,29 @@ public class JwtUtil {
 
     private final String SECRET = "hrms-jwt-secret-key-1234567890-abcdef";
 
-    public String generateToken(String username) {
+    public String generateToken(String email, String role) {
 
         return Jwts.builder()
-                .setSubject(username)
+                .setSubject(email)
+                .claim("role", role)
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * 60 * 24))
                 .signWith(Keys.hmacShaKeyFor(SECRET.getBytes()), SignatureAlgorithm.HS256)
                 .compact();
     }
 
-    public String getUsernameFromToken(String token) {
+    private Claims extractClaims(String token) {
         return Jwts.parserBuilder()
-                .setSigningKey(SECRET.getBytes())
+                .setSigningKey(Keys.hmacShaKeyFor(SECRET.getBytes()))
                 .build()
                 .parseClaimsJws(token)
-                .getBody()
-                .getSubject();
+                .getBody();
+    }
+    
+    public String getEmailFromToken(String token) {
+    	return extractClaims(token).getSubject(); 
+    }
+    public String getRoleFromToken(String token) {
+        return extractClaims(token).get("role", String.class);  //
     }
 }

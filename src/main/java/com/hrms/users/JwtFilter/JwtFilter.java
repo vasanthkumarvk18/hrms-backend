@@ -8,6 +8,12 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import java.util.List;
+
 import java.io.IOException;
 
 @Component
@@ -25,7 +31,7 @@ public class JwtFilter extends OncePerRequestFilter {
                                     FilterChain filterChain)
             throws ServletException, IOException {
 
-        // ✅ Allow preflight requests
+        // Allow preflight requests
         if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
             filterChain.doFilter(request, response);
             return;
@@ -50,7 +56,23 @@ public class JwtFilter extends OncePerRequestFilter {
         String token = authHeader.substring(7);
 
         try {
-            jwtUtil.getUsernameFromToken(token);
+        	String email = jwtUtil.getEmailFromToken(token);
+        	String role = jwtUtil.getRoleFromToken(token);
+        	
+        	// Convert role into Spring format
+        	List<GrantedAuthority> authorities =
+        	        List.of(new SimpleGrantedAuthority("ROLE_" + role.toUpperCase()));
+        	
+            //  THIS PART WAS MISSING
+            UsernamePasswordAuthenticationToken authentication =
+                    new UsernamePasswordAuthenticationToken(
+                            email,
+                            null,
+                            // List.of() // roles can be added later
+                            authorities
+                    );
+
+            SecurityContextHolder.getContext().setAuthentication(authentication);
         } catch (Exception e) {
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             response.getWriter().write("Invalid or expired token");

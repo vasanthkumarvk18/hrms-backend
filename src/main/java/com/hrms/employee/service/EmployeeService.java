@@ -10,11 +10,18 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.UUID;
 
+import com.hrms.users.entity.User;
+import com.hrms.users.entity.Role;
+import com.hrms.users.repository.UserRepository;
+import org.springframework.security.crypto.password.PasswordEncoder;
+
 @Service
 @RequiredArgsConstructor
 public class EmployeeService {
 
-    private final EmployeeRepository employeeRepository;
+	private final EmployeeRepository employeeRepository;
+	private final UserRepository userRepository;
+	private final PasswordEncoder passwordEncoder;
 
     public Employee createEmployee(EmployeeCreateDTO request) {
 
@@ -49,7 +56,20 @@ public class EmployeeService {
                 .build();
 
 
-        return employeeRepository.save(employee);
+        Employee savedEmployee = employeeRepository.save(employee);
+ 
+        if (userRepository.existsByEmail(savedEmployee.getEmail())) {
+            throw new RuntimeException("User account already exists");
+        } 
+     // 🔐 Create login credentials automatically
+     User user = new User();
+     user.setEmail(savedEmployee.getEmail());
+     user.setPassword(passwordEncoder.encode("1234567890"));
+     user.setRole(Role.EMPLOYEE);
+
+     userRepository.save(user);
+
+     return savedEmployee;
     }
 
     public List<Employee> getActiveEmployees() {

@@ -27,9 +27,14 @@ public class Attendance {
     @JoinColumn(name = "employee_code", nullable = false)
     private Employee employee;
 
+    @Column(nullable = false)
     private LocalDate date;
+    
     private LocalTime checkIn;
     private LocalTime checkOut;
     private Integer sessionNo; //NEW
     private String status; // PRESENT, ABSENT, HALF_DAY
+    
+    @Column(name = "work_location")
+    private String workLocation;
 }

@@ -2,6 +2,8 @@ package com.hrms.users.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 
 @Entity
 @Table(name = "users")
@@ -15,8 +17,11 @@ public class User {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private String username;
+	@Column(unique = true, nullable = false)
+	private String email;
     private String password;
-    private String role;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private Role role;
 
 }

@@ -14,6 +14,12 @@ import com.hrms.attendance.repository.*;
 
 import java.time.Duration;
 
+import com.hrms.attendance.dto.*;
+import java.util.stream.Collectors;
+
+
+
+
 
 @Service
 public class AttendanceService {
@@ -23,11 +29,22 @@ public class AttendanceService {
     public AttendanceService(AttendanceRepository attendanceRepository) {
         this.attendanceRepository = attendanceRepository;
     }
-
+    
     // CHECK-IN
-    public Attendance checkIn(Employee employee) {
+    public Attendance checkIn(Employee employee, String workLocation) {
 
-//    	LocalDate today = LocalDate.now();
+        // LocalDate today = LocalDate.now();
+
+    	// Auto close previous open attendance
+        attendanceRepository
+            .findTopByEmployeeAndCheckOutIsNullOrderByDateDesc(employee)
+            .ifPresent(a -> {
+                if (!a.getDate().equals(LocalDate.now())) {
+                    a.setCheckOut(LocalTime.of(18, 0)); // Auto close 6 PM
+                    a.setStatus("COMPLETED");
+                    attendanceRepository.save(a);
+                }
+            });
 
         attendanceRepository
         .findByEmployeeAndDateAndCheckOutIsNull(employee, LocalDate.now())
@@ -46,6 +63,7 @@ public class AttendanceService {
         attendance.setCheckIn(LocalTime.now());
         attendance.setSessionNo(nextSession);
         attendance.setStatus("PRESENT");
+        attendance.setWorkLocation(workLocation);
 
         return attendanceRepository.save(attendance);
     }
@@ -167,5 +185,134 @@ public class AttendanceService {
 //
 //        return attendanceRepository.save(attendance);
 //    }
+    
+    
+    public List<Attendancedto> getHrReport(LocalDate fromDate, LocalDate toDate) {
+
+        List<Attendance> allAttendance;
+
+        if (fromDate != null && toDate != null) {
+            allAttendance = attendanceRepository
+                    .findByDateBetween(fromDate, toDate);
+        } else {
+            allAttendance = attendanceRepository.findAll();
+        }
+
+        Map<String, List<Attendance>> grouped =
+                allAttendance.stream()
+                        .collect(Collectors.groupingBy(a ->
+                                a.getEmployee().getEmployeeCode() + "_" + a.getDate()
+                        ));
+
+        return grouped.values().stream().map(list -> {
+
+            Attendance first = list.get(0);
+            Employee emp = first.getEmployee();
+            LocalDate date = first.getDate();
+
+            long totalMinutes = 0;
+            boolean isLate = false;
+
+            for (Attendance a : list) {
+                if (a.getCheckIn() != null && a.getCheckOut() != null) {
+
+                    totalMinutes +=
+                            Duration.between(a.getCheckIn(), a.getCheckOut())
+                                    .toMinutes();
+
+                    if (a.getCheckIn().isAfter(LocalTime.of(9, 30))) {
+                        isLate = true;
+                    }
+                }
+            }
+
+            double hours = totalMinutes / 60.0;
+            double overtime = hours > 8 ? hours - 8 : 0;
+
+            Attendancedto dto = new Attendancedto();
+            dto.setDate(date.toString());
+            dto.setEmployeeName(emp.getFirstName() + " " + emp.getLastName());
+            dto.setWorkingHours(hours);
+            dto.setLateMark(isLate ? "YES" : "NO");
+            dto.setOvertime(overtime);
+
+            return dto;
+
+        }).collect(Collectors.toList());
+    }
+
+    // =========================================
+    // HR DASHBOARD SUMMARY (ALL EMPLOYEES)
+    // =========================================
+    public Map<String, Object> getDashboardSummary(
+            LocalDate fromDate,
+            LocalDate toDate) {
+
+        List<Attendance> records;
+
+        if (fromDate != null && toDate != null) {
+            records = attendanceRepository.findByDateBetween(fromDate, toDate);
+        } else {
+            records = attendanceRepository.findAll();
+        }
+
+        long totalEmployees = records.stream()
+                .map(a -> a.getEmployee().getEmployeeCode())
+                .distinct()
+                .count();
+
+        long presentDays = records.stream()
+                .filter(a -> "COMPLETED".equals(a.getStatus()))
+                .count();
+
+        long absentDays = records.stream()
+                .filter(a -> "ABSENT".equals(a.getStatus()))
+                .count();
+
+        double totalOvertime = records.stream()
+                .mapToDouble(a -> {
+                    if (a.getCheckIn() != null && a.getCheckOut() != null) {
+                        long minutes = Duration.between(
+                                a.getCheckIn(),
+                                a.getCheckOut()
+                        ).toMinutes();
+
+                        double hours = minutes / 60.0;
+                        return hours > 8 ? hours - 8 : 0;
+                    }
+                    return 0;
+                }).sum();
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("totalEmployees", totalEmployees);
+        result.put("presentDays", presentDays);
+        result.put("absentDays", absentDays);
+        result.put("overtimeHours", totalOvertime);
+
+        return result;
+    }
+
+    // MANUAL CHECKOUT (ADMIN USE)
+    public Attendance manualCheckout(Employee employee, LocalDate date) {
+
+        Attendance attendance = attendanceRepository
+                .findTopByEmployeeAndDateOrderBySessionNoDesc(employee, date)
+                .orElseThrow(() ->
+                        new RuntimeException("No attendance found for this date")
+                );
+
+        if (attendance.getCheckOut() != null) {
+            throw new RuntimeException("Already checked out");
+        }
+
+        attendance.setCheckOut(LocalTime.of(18, 0));
+        attendance.setStatus("COMPLETED");
+
+        return attendanceRepository.save(attendance);
+    }
+
+
+
+
 
 }
